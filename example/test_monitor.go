@@ -7,8 +7,6 @@ import (
 	s "github.com/lambda-zhang/systemmonitor"
 )
 
-var periodSec int = 1
-
 func callback(sysinfo *s.SysInfo) {
 	fmt.Println("###############################################")
 	fmt.Println("os:")
@@ -27,7 +25,7 @@ func callback(sysinfo *s.SysInfo) {
 	fmt.Println("net:")
 	n := sysinfo.Net
 	for k, v := range n.Cards {
-		fmt.Printf("\t%s: inKBps=%d outKBps=%d\n", k, v.InBytes/uint64(periodSec)/1024, v.OutBytes/uint64(periodSec)/1024)
+		fmt.Printf("\t%s: inKBps=%d outKBps=%d\n", k, v.InBytes/uint64(sysinfo.PeriodSec)/1024, v.OutBytes/uint64(sysinfo.PeriodSec)/1024)
 	}
 	fmt.Printf("\ttotal TcpConnections=%d ESTABLISHED=%d TCP_LISTEN=%d\n",
 		n.TCP.TCPConnections+n.TCP6.TCPConnections, n.TCP.TCPEstablished+n.TCP6.TCPEstablished, n.TCP.TCPListen+n.TCP6.TCPListen)
@@ -36,7 +34,8 @@ func callback(sysinfo *s.SysInfo) {
 	f := sysinfo.Fs
 	for k, v := range f.Disks {
 		fmt.Printf("\t%s FsVfstype=%s BytesAll=%d BytesUsedPermillage=%d‰ ReadBytes=%dKBps  WriteBytes=%dKBps ReadRequests=%dqps WriteRequests=%dqps\n",
-			k, v.FsVfstype, v.BytesAll, v.BytesUsedPermillage, v.ReadBytes/uint64(periodSec)/1024, v.WriteBytes/uint64(periodSec)/1024, v.ReadRequests/uint64(periodSec), v.WriteRequests/uint64(periodSec))
+			k, v.FsVfstype, v.BytesAll, v.BytesUsedPermillage, v.ReadBytes/uint64(sysinfo.PeriodSec)/1024, v.WriteBytes/uint64(sysinfo.PeriodSec)/1024,
+			v.ReadRequests/uint64(sysinfo.PeriodSec), v.WriteRequests/uint64(sysinfo.PeriodSec))
 	}
 
 	fmt.Println("thermal:")
@@ -48,7 +47,7 @@ func callback(sysinfo *s.SysInfo) {
 }
 
 func main() {
-	sm := s.New(periodSec, callback)
+	sm := s.New(1, callback)
 	sm.OSEn = true
 	sm.CPUEn = true
 	sm.MemEn = true

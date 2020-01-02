@@ -27,6 +27,8 @@ type SysInfo struct {
 	ThermalEn bool
 	Thermal   Thermalinfo
 
+	PeriodSec int //　任务执行周期，单位是秒
+
 	c *cron.Cron
 }
 
@@ -62,6 +64,7 @@ func New(periodSec int, callback func(*SysInfo)) *SysInfo {
 	if periodSec < 1 {
 		panic("period must >= 1second")
 	}
+	info.PeriodSec = periodSec
 	info.Getsysteminfo()
 
 	spec := fmt.Sprintf("@every %ds", periodSec)
