@@ -135,9 +135,9 @@ func listdisks() (disks []string, err error) {
 }
 
 type mountpoint struct {
-	FsSpec    string
-	FsFile    string
-	FsVfstype string
+	FsSpec    string // 分区设备节点，如/dev/sda1
+	FsFile    string // 分区挂载目录
+	FsVfstype string // 分区格式
 }
 
 func listrootfspartition() (*mountpoint, error) {
@@ -175,7 +175,7 @@ func listrootfspartition() (*mountpoint, error) {
 				points = &mountpoint{
 					FsSpec:    dev,
 					FsFile:    "/",
-					FsVfstype: "TODO",
+					FsVfstype: "unknown",
 				}
 				break
 			}
@@ -216,6 +216,12 @@ func listmountedpartition() (map[string]*mountpoint, error) {
 		if _, exist := fsTypeIgnore[fsVfstype]; exist {
 			continue
 		}
+		if fsFile == "/" {
+			if rootpoint != nil {
+				points[rootpoint.FsSpec].FsVfstype = fsVfstype
+			}
+		}
+
 		if _, ok := points[fsSpec]; !ok {
 			points[fsSpec] = &mountpoint{
 				FsSpec:    fsSpec,
