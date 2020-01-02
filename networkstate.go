@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	netif_ignore = []string{
+	netifIgnore = []string{
 		"sit",
 		"dummy",
 		"docker",
@@ -21,20 +21,21 @@ var (
 )
 
 const (
-	ERROR_STATUS    string = "00"
-	TCP_ESTABLISHED string = "01"
-	TCP_SYN_SENT    string = "02"
-	TCP_SYN_RECV    string = "03"
-	TCP_FIN_WAIT1   string = "04"
-	TCP_FIN_WAIT2   string = "05"
-	TCP_TIME_WAIT   string = "06"
-	TCP_CLOSE       string = "07"
-	TCP_CLOSE_WAIT  string = "08"
-	TCP_LAST_ACK    string = "09"
-	TCP_LISTEN      string = "0A"
-	TCP_CLOSING     string = "0B"
+	errorStatus    string = "00"
+	tcpEstablished string = "01"
+	tcpSynSent     string = "02"
+	tcpSynRecv     string = "03"
+	tcpFinWait1    string = "04"
+	tcpFinWait2    string = "05"
+	tcpTimewait    string = "06"
+	tcpClose       string = "07"
+	tcpCloseWait   string = "08"
+	tcpLastAck     string = "09"
+	tcpListen      string = "0A"
+	tcpClosing     string = "0B"
 )
 
+// NetIf 网卡信息
 type NetIf struct {
 	Iface string
 
@@ -48,36 +49,38 @@ type NetIf struct {
 	TotalOutBytes    uint64
 	TotalOutPackages uint64
 
-	pre_TotalInBytes     uint64
-	pre_TotalInPackages  uint64
-	pre_TotalOutBytes    uint64
-	pre_TotalOutPackages uint64
+	preTotalInBytes     uint64
+	preTotalInPackages  uint64
+	preTotalOutBytes    uint64
+	preTotalOutPackages uint64
 }
 
-type TcpInfo struct {
-	Tcp_error_status uint64
-	Tcp_established  uint64
-	Tcp_syn_sent     uint64
-	Tcp_syn_recv     uint64
-	Tcp_fin_wait1    uint64
-	Tcp_fin_wait2    uint64
-	Tcp_time_wait    uint64
-	Tcp_close        uint64
-	Tcp_close_wait   uint64
-	Tcp_last_ack     uint64
-	Tcp_listen       uint64
-	Tcp_closing      uint64
-	TcpConnections   uint64 //total
+// TCPInfo tcp信息
+type TCPInfo struct {
+	TCPErrorStatus uint64
+	TCPEstablished uint64
+	TCPSynSent     uint64
+	TCPSynRecv     uint64
+	TCPFinWait1    uint64
+	TCPFinWait2    uint64
+	TCPTimewait    uint64
+	TCPClose       uint64
+	TCPCloseWait   uint64
+	TCPLastAck     uint64
+	TCPListen      uint64
+	TCPClosing     uint64
+	TCPConnections uint64 //total
 }
 
+// NetWorkInfo 网卡信息
 type NetWorkInfo struct {
 	Cards map[string]*NetIf
-	Tcp   *TcpInfo
-	Tcp6  *TcpInfo
+	TCP   *TCPInfo
+	TCP6  *TCPInfo
 }
 
-func _gettcpcount(path string) (TcpInfo, error) {
-	var tcp TcpInfo
+func _gettcpcount(path string) (TCPInfo, error) {
+	var tcp TCPInfo
 	file, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -97,38 +100,38 @@ func _gettcpcount(path string) (TcpInfo, error) {
 			continue
 		}
 		switch fields[3] {
-		case ERROR_STATUS:
-			tcp.Tcp_error_status += 1
-		case TCP_ESTABLISHED:
-			tcp.Tcp_established += 1
-		case TCP_SYN_SENT:
-			tcp.Tcp_syn_sent += 1
-		case TCP_SYN_RECV:
-			tcp.Tcp_syn_recv += 1
-		case TCP_FIN_WAIT1:
-			tcp.Tcp_fin_wait1 += 1
-		case TCP_FIN_WAIT2:
-			tcp.Tcp_fin_wait2 += 1
-		case TCP_TIME_WAIT:
-			tcp.Tcp_time_wait += 1
-		case TCP_CLOSE:
-			tcp.Tcp_close += 1
-		case TCP_CLOSE_WAIT:
-			tcp.Tcp_close_wait += 1
-		case TCP_LAST_ACK:
-			tcp.Tcp_last_ack += 1
-		case TCP_LISTEN:
-			tcp.Tcp_listen += 1
-		case TCP_CLOSING:
-			tcp.Tcp_closing += 1
+		case errorStatus:
+			tcp.TCPErrorStatus++
+		case tcpEstablished:
+			tcp.TCPEstablished++
+		case tcpSynSent:
+			tcp.TCPSynSent++
+		case tcpSynRecv:
+			tcp.TCPSynRecv++
+		case tcpFinWait1:
+			tcp.TCPFinWait1++
+		case tcpFinWait2:
+			tcp.TCPFinWait2++
+		case tcpTimewait:
+			tcp.TCPTimewait++
+		case tcpClose:
+			tcp.TCPClose++
+		case tcpCloseWait:
+			tcp.TCPCloseWait++
+		case tcpLastAck:
+			tcp.TCPLastAck++
+		case tcpListen:
+			tcp.TCPListen++
+		case tcpClosing:
+			tcp.TCPClosing++
 		}
-		tcp.TcpConnections += 1
+		tcp.TCPConnections++
 	}
 	file.Close()
 	return tcp, nil
 }
 
-func gettcpcount() (TcpInfo, TcpInfo, error) {
+func gettcpcount() (TCPInfo, TCPInfo, error) {
 	tcpcount, err := _gettcpcount("/proc/net/tcp")
 	if err != nil {
 		return tcpcount, tcpcount, err
@@ -141,9 +144,9 @@ func gettcpcount() (TcpInfo, TcpInfo, error) {
 	return tcpcount, tcpcount6, nil
 }
 
-func (this *NetWorkInfo) getnetif() error {
-	if this.Cards == nil {
-		this.Cards = make(map[string]*NetIf)
+func (ninfo *NetWorkInfo) getnetif() error {
+	if ninfo.Cards == nil {
+		ninfo.Cards = make(map[string]*NetIf)
 	}
 	file, err := os.Open("/proc/net/dev")
 	if err != nil {
@@ -164,7 +167,7 @@ func (this *NetWorkInfo) getnetif() error {
 			continue
 		}
 		isignored := false
-		for _, ignore := range netif_ignore {
+		for _, ignore := range netifIgnore {
 			if strings.Index(fields[0], ignore) == 0 {
 				isignored = true
 			}
@@ -181,37 +184,37 @@ func (this *NetWorkInfo) getnetif() error {
 		inpackages, _ := strconv.ParseUint(fields[2], 10, 64)
 		outbytes, _ := strconv.ParseUint(fields[9], 10, 64)
 		outpackages, _ := strconv.ParseUint(fields[10], 10, 64)
-		if _, ok := this.Cards[name]; !ok {
-			this.Cards[name] = &NetIf{}
-			this.Cards[name].Iface = name
+		if _, ok := ninfo.Cards[name]; !ok {
+			ninfo.Cards[name] = &NetIf{}
+			ninfo.Cards[name].Iface = name
 		}
-		netcard := this.Cards[name]
+		netcard := ninfo.Cards[name]
 
 		netcard.TotalInBytes = inbytes
 		netcard.TotalInPackages = inpackages
 		netcard.TotalOutBytes = outbytes
 		netcard.TotalOutPackages = outpackages
 
-		if netcard.pre_TotalInBytes > 0 && netcard.pre_TotalInPackages > 0 {
-			netcard.InBytes = inbytes - netcard.pre_TotalInBytes
-			netcard.InPackages = inpackages - netcard.pre_TotalInPackages
+		if netcard.preTotalInBytes > 0 && netcard.preTotalInPackages > 0 {
+			netcard.InBytes = inbytes - netcard.preTotalInBytes
+			netcard.InPackages = inpackages - netcard.preTotalInPackages
 		}
-		if netcard.pre_TotalOutBytes > 0 && netcard.pre_TotalOutPackages > 0 {
-			netcard.OutBytes = outbytes - netcard.pre_TotalOutBytes
-			netcard.OutPackages = outpackages - netcard.pre_TotalOutPackages
+		if netcard.preTotalOutBytes > 0 && netcard.preTotalOutPackages > 0 {
+			netcard.OutBytes = outbytes - netcard.preTotalOutBytes
+			netcard.OutPackages = outpackages - netcard.preTotalOutPackages
 		}
 
-		netcard.pre_TotalInBytes = inbytes
-		netcard.pre_TotalInPackages = inpackages
-		netcard.pre_TotalOutBytes = outbytes
-		netcard.pre_TotalOutPackages = outpackages
+		netcard.preTotalInBytes = inbytes
+		netcard.preTotalInPackages = inpackages
+		netcard.preTotalOutBytes = outbytes
+		netcard.preTotalOutPackages = outpackages
 	}
 	file.Close()
 	return nil
 }
 
-func (this *NetWorkInfo) getnetworkstate() error {
-	err := this.getnetif()
+func (ninfo *NetWorkInfo) getnetworkstate() error {
+	err := ninfo.getnetif()
 	if err != nil {
 		return err
 	}
@@ -219,8 +222,8 @@ func (this *NetWorkInfo) getnetworkstate() error {
 	if errtcp != nil {
 		return errtcp
 	}
-	this.Tcp = &tcpcount
-	this.Tcp6 = &tcpcount6
+	ninfo.TCP = &tcpcount
+	ninfo.TCP6 = &tcpcount6
 
 	return nil
 }

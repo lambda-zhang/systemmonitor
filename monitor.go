@@ -7,6 +7,7 @@ import (
 	cron "github.com/robfig/cron"
 )
 
+// SysInfo 系统监视器的
 type SysInfo struct {
 	OS      OSinfo
 	CPU     Cpustateinfo
@@ -18,29 +19,29 @@ type SysInfo struct {
 	c *cron.Cron
 }
 
-func (this *SysInfo) Getsysteminfo() {
-	this.OS.getosinfo()
-	this.CPU.getcpustateinfo()
-	this.Mem.getmeminfo()
-	this.Net.getnetworkstate()
-	this.Fs.getfsstate()
-	this.Thermal.GetThermal()
+// Getsysteminfo 获得系统资源信息
+func (si *SysInfo) Getsysteminfo() {
+	si.OS.getosinfo()
+	si.CPU.getcpustateinfo()
+	si.Mem.getmeminfo()
+	si.Net.getnetworkstate()
+	si.Fs.getfsstate()
+	si.Thermal.getThermal()
 }
 
-func New(period_sec int, callback func(*SysInfo)) *SysInfo {
+// New 新新系统监视器
+func New(periodSec int, callback func(*SysInfo)) *SysInfo {
 	var info *SysInfo = &SysInfo{}
 	ostype := runtime.GOOS
 	if ostype != "linux" {
 		panic("support linux only fornow")
-		return nil
 	}
-	if period_sec < 1 {
+	if periodSec < 1 {
 		panic("period must >= 1second")
-		return nil
 	}
 	info.Getsysteminfo()
 
-	spec := fmt.Sprintf("@every %ds", period_sec)
+	spec := fmt.Sprintf("@every %ds", periodSec)
 	info.c = cron.New()
 	info.c.AddFunc(spec, func() {
 		info.Getsysteminfo()
@@ -49,10 +50,12 @@ func New(period_sec int, callback func(*SysInfo)) *SysInfo {
 	return info
 }
 
-func (this *SysInfo) Start() {
-	this.c.Start()
+// Start 开始系统监视器的定时任务
+func (si *SysInfo) Start() {
+	si.c.Start()
 }
 
-func (this *SysInfo) Stop() {
-	this.c.Stop()
+// Stop 停止系统监视器的定时任务
+func (si *SysInfo) Stop() {
+	si.c.Stop()
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// OSinfo 操作系统信息
 type OSinfo struct {
 	UpTime        int64
 	StartTime     int64
@@ -18,19 +19,19 @@ type OSinfo struct {
 	Os             string
 	KernelVersion  string
 	KernelHostname string
-	NumCpu         int
+	NumCPU         int
 }
 
-func (this *OSinfo) getcpuinfo() (int, error) {
+func (oinfo *OSinfo) getcpuinfo() (int, error) {
 	lists, err := listdir("/sys/bus/cpu/devices/")
 	if err == nil {
-		this.NumCpu = len(lists)
-		return this.NumCpu, err
+		oinfo.NumCPU = len(lists)
+		return oinfo.NumCPU, err
 	}
 	return 0, err
 }
 
-func (this *OSinfo) getuptime() error {
+func (oinfo *OSinfo) getuptime() error {
 	uptime, err := readFile2String("/proc/uptime")
 	if err != nil {
 		return err
@@ -55,8 +56,8 @@ func (this *OSinfo) getuptime() error {
 	}
 	upsec := int64(val)
 	starttime := nowts - upsec
-	this.UpTime = upsec
-	this.StartTime = starttime
+	oinfo.UpTime = upsec
+	oinfo.StartTime = starttime
 
 	val, err = strconv.ParseFloat(uptimes[1], 64)
 	if err != nil {
@@ -64,7 +65,7 @@ func (this *OSinfo) getuptime() error {
 		return err
 	}
 
-	cpunum, _ := this.getcpuinfo()
+	cpunum, _ := oinfo.getcpuinfo()
 	if cpunum == 0 {
 		cpunum = 1
 	}
@@ -76,11 +77,11 @@ func (this *OSinfo) getuptime() error {
 	} else {
 		UseAge = 1000 - int(float64(idlesec)/float64(upsec)*1000)
 	}
-	this.UsePermillage = UseAge
+	oinfo.UsePermillage = UseAge
 	return err
 }
 
-func (this *OSinfo) getkernelinfo() error {
+func (oinfo *OSinfo) getkernelinfo() error {
 	kversion, err := readFile2String("/proc/version")
 	if err != nil {
 		return err
@@ -94,24 +95,24 @@ func (this *OSinfo) getkernelinfo() error {
 		err = fmt.Errorf("kernel version string invalied")
 		return err
 	}
-	this.KernelVersion = version[0] + "-" + version[2]
-	this.KernelHostname, err = os.Hostname()
+	oinfo.KernelVersion = version[0] + "-" + version[2]
+	oinfo.KernelHostname, err = os.Hostname()
 	return nil
 }
 
-func (this *OSinfo) getosinfo() error {
-	this.Arch = runtime.GOARCH
-	this.Os = runtime.GOOS
+func (oinfo *OSinfo) getosinfo() error {
+	oinfo.Arch = runtime.GOARCH
+	oinfo.Os = runtime.GOOS
 
-	err := this.getkernelinfo()
+	err := oinfo.getkernelinfo()
 	if err != nil {
 		return err
 	}
-	_, err = this.getcpuinfo()
+	_, err = oinfo.getcpuinfo()
 	if err != nil {
 		return err
 	}
-	err = this.getuptime()
+	err = oinfo.getuptime()
 	if err != nil {
 		return err
 	}

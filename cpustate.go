@@ -9,22 +9,23 @@ import (
 	"strings"
 )
 
+// Cpustateinfo CPU信息
 type Cpustateinfo struct {
-	Cpu_idle       uint64 // time spent in the idle task
-	Cpu_total      uint64 // total of all time fields
-	Cpu_permillage int    //usage, 50 meas 5%
+	CPUIdle       uint64 // time spent in the idle task
+	CPUTotal      uint64 // total of all time fields
+	CPUPermillage int    //usage, 50 meas 5%
 
 	Avg1min  float32
 	Avg5min  float32
 	Avg15min float32
 
-	pre_Cpu_idle  uint64
-	pre_Cpu_total uint64
-	cur_Cpu_idle  uint64
-	cur_Cpu_total uint64
+	preCPUIdle  uint64
+	preCPUTotal uint64
+	curCPUIdle  uint64
+	curCPUTotal uint64
 }
 
-func (this *Cpustateinfo) getloadavg() error {
+func (cpu *Cpustateinfo) getloadavg() error {
 	loadavg, err := readFile2String("/proc/loadavg")
 	if err != nil {
 		return err
@@ -45,23 +46,20 @@ func (this *Cpustateinfo) getloadavg() error {
 	if err != nil {
 		err = fmt.Errorf("Avg1min unknown")
 		return err
-	} else {
-		this.Avg1min = float32(val)
 	}
+	cpu.Avg1min = float32(val)
 	val, err = strconv.ParseFloat(loadavgs[1], 32)
 	if err != nil {
 		err = fmt.Errorf("Avg5min unknown")
 		return err
-	} else {
-		this.Avg5min = float32(val)
 	}
+	cpu.Avg5min = float32(val)
 	val, err = strconv.ParseFloat(loadavgs[2], 32)
 	if err != nil {
 		err = fmt.Errorf("Avg15min unknown")
 		return err
-	} else {
-		this.Avg15min = float32(val)
 	}
+	cpu.Avg15min = float32(val)
 
 	return nil
 }
@@ -84,7 +82,7 @@ func _getcpuusage(fields []string) (uint64, uint64, error) {
 	return total, idle, nil
 }
 
-func (this *Cpustateinfo) getcpuusage() error {
+func (cpu *Cpustateinfo) getcpuusage() error {
 	file, err := os.Open("/proc/stat")
 	if err != nil {
 		panic(err)
@@ -100,42 +98,42 @@ func (this *Cpustateinfo) getcpuusage() error {
 		if len(fields) < 1 || fields[0] != "cpu" {
 			continue
 		}
-		this.cur_Cpu_total, this.cur_Cpu_idle, _ = _getcpuusage(fields)
+		cpu.curCPUTotal, cpu.curCPUIdle, _ = _getcpuusage(fields)
 	}
 	file.Close()
 
-	if this.cur_Cpu_total > 0 && this.pre_Cpu_total > 0 {
-		this.Cpu_total = this.cur_Cpu_total - this.pre_Cpu_total
-		this.Cpu_idle = this.cur_Cpu_idle - this.pre_Cpu_idle
+	if cpu.curCPUTotal > 0 && cpu.preCPUTotal > 0 {
+		cpu.CPUTotal = cpu.curCPUTotal - cpu.preCPUTotal
+		cpu.CPUIdle = cpu.curCPUIdle - cpu.preCPUIdle
 	}
 
-	if this.Cpu_total < 1 || this.Cpu_idle < 1 {
-		this.Cpu_permillage = 0
-	} else if this.Cpu_total < this.Cpu_idle {
-		this.Cpu_permillage = 1000
+	if cpu.CPUTotal < 1 || cpu.CPUIdle < 1 {
+		cpu.CPUPermillage = 0
+	} else if cpu.CPUTotal < cpu.CPUIdle {
+		cpu.CPUPermillage = 1000
 	} else {
-		this.Cpu_permillage = int((float64(this.Cpu_total-this.Cpu_idle) / float64(this.Cpu_total)) * 1000)
+		cpu.CPUPermillage = int((float64(cpu.CPUTotal-cpu.CPUIdle) / float64(cpu.CPUTotal)) * 1000)
 	}
-	if this.Cpu_permillage > 1000 {
-		this.Cpu_permillage = 1000
-	} else if this.Cpu_permillage < 1 {
-		this.Cpu_permillage = 0
+	if cpu.CPUPermillage > 1000 {
+		cpu.CPUPermillage = 1000
+	} else if cpu.CPUPermillage < 1 {
+		cpu.CPUPermillage = 0
 	}
 
-	if this.cur_Cpu_total > 0 {
-		this.pre_Cpu_idle = this.cur_Cpu_idle
-		this.pre_Cpu_total = this.cur_Cpu_total
+	if cpu.curCPUTotal > 0 {
+		cpu.preCPUIdle = cpu.curCPUIdle
+		cpu.preCPUTotal = cpu.curCPUTotal
 	}
 
 	return nil
 }
 
-func (this *Cpustateinfo) getcpustateinfo() error {
-	err := this.getloadavg()
+func (cpu *Cpustateinfo) getcpustateinfo() error {
+	err := cpu.getloadavg()
 	if err != nil {
 		return err
 	}
-	err = this.getcpuusage()
+	err = cpu.getcpuusage()
 	if err != nil {
 		return err
 	}

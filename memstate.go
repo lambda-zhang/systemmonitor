@@ -8,17 +8,18 @@ import (
 	"strings"
 )
 
+// Meminfo 内存信息
 type Meminfo struct {
-	MemTotal          uint64
-	MemAvailable      uint64
+	MemTotal         uint64
+	MemAvailable     uint64
 	MemUsePermillage int //usage, 50 meas 5%
 
-	SwapTotal          uint64
-	SwapFree           uint64
+	SwapTotal         uint64
+	SwapFree          uint64
 	SwapUsePermillage int //usage, 50 meas 5%
 }
 
-func (this *Meminfo) getmeminfo() error {
+func (meminfo *Meminfo) getmeminfo() error {
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
 		panic(err)
@@ -39,36 +40,36 @@ func (this *Meminfo) getmeminfo() error {
 		}
 
 		if fields[0] == "MemTotal:" {
-			this.MemTotal = val * 1024
+			meminfo.MemTotal = val * 1024
 
 		} else if fields[0] == "MemAvailable:" {
-			this.MemAvailable = val * 1024
+			meminfo.MemAvailable = val * 1024
 
 		} else if fields[0] == "SwapTotal:" {
-			this.SwapTotal = val * 1024
+			meminfo.SwapTotal = val * 1024
 
 		} else if fields[0] == "SwapFree:" {
-			this.SwapFree = val * 1024
+			meminfo.SwapFree = val * 1024
 
 		}
 	}
 	file.Close()
 
-	if this.MemTotal > 0 {
-		this.MemUsePermillage= 1000 - int(float64(this.MemAvailable) / float64(this.MemTotal) * 1000)
+	if meminfo.MemTotal > 0 {
+		meminfo.MemUsePermillage = 1000 - int(float64(meminfo.MemAvailable)/float64(meminfo.MemTotal)*1000)
 	} else {
-		this.MemUsePermillage = 0
+		meminfo.MemUsePermillage = 0
 	}
-	if this.MemUsePermillage > 1000 {
-		this.MemUsePermillage = 1000
+	if meminfo.MemUsePermillage > 1000 {
+		meminfo.MemUsePermillage = 1000
 	}
-	if this.SwapTotal > 0 {
-		this.SwapUsePermillage = 1000 - int(float64(this.SwapFree) / float64(this.SwapTotal) * 1000)
+	if meminfo.SwapTotal > 0 {
+		meminfo.SwapUsePermillage = 1000 - int(float64(meminfo.SwapFree)/float64(meminfo.SwapTotal)*1000)
 	} else {
-		this.SwapUsePermillage = 0
+		meminfo.SwapUsePermillage = 0
 	}
-	if this.SwapUsePermillage > 1000 {
-		this.SwapUsePermillage = 1000
+	if meminfo.SwapUsePermillage > 1000 {
+		meminfo.SwapUsePermillage = 1000
 	}
 	return nil
 }

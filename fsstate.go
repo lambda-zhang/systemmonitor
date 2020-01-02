@@ -3,6 +3,7 @@ package systemmonitor
 import (
 	"bufio"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,13 +12,13 @@ import (
 )
 
 var (
-	disk_ignore = []string{
+	diskIgnore = []string{
 		"loop",
 		"sr",
 	}
 )
 
-var FSSPEC_IGNORE = map[string]struct{}{
+var fsSpecIgnore = map[string]struct{}{
 	"/dev/root":   struct{}{},
 	"none":        struct{}{},
 	"nodev":       struct{}{},
@@ -30,7 +31,7 @@ var FSSPEC_IGNORE = map[string]struct{}{
 	"gvfsd-fuse":  struct{}{},
 }
 
-var FSTYPE_IGNORE = map[string]struct{}{
+var fsTypeIgnore = map[string]struct{}{
 	"cgroup":     struct{}{},
 	"debugfs":    struct{}{},
 	"devpts":     struct{}{},
@@ -48,6 +49,7 @@ var FSTYPE_IGNORE = map[string]struct{}{
 	"squashfs":   struct{}{},
 }
 
+// DiskStates 磁盘状态
 type DiskStates struct {
 	Device    string
 	FsSpec    string
@@ -66,12 +68,13 @@ type DiskStates struct {
 	WriteRequests uint64 // total number of writes completed successfully.
 	WriteBytes    uint64 // total number of Bytes written successfully.
 
-	pre_ReadRequests  uint64 // Total number of reads completed successfully.
-	pre_ReadBytes     uint64 // Total number of Bytes read successfully.
-	pre_WriteRequests uint64 // total number of writes completed successfully.
-	pre_WriteBytes    uint64 // total number of Bytes written successfully.
+	preReadRequests  uint64 // Total number of reads completed successfully.
+	preReadBytes     uint64 // Total number of Bytes read successfully.
+	preWriteRequests uint64 // total number of writes completed successfully.
+	preWriteBytes    uint64 // total number of Bytes written successfully.
 }
 
+// Fsinfo 文件系统信息
 type Fsinfo struct {
 	Disks map[string]*DiskStates
 }
@@ -106,6 +109,29 @@ func getDeviceByUUID(uuid string) (string, error) {
 func getDeviceByLABEL(label string) (string, error) {
 	device, errorcode := getDevice("/dev/disk/by-label", label)
 	return device, errorcode
+}
+
+func listdisks() (disks []string, err error) {
+	disks = make([]string, 0, 10)
+
+	dir, err := ioutil.ReadDir("/sys/block/")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fi := range dir {
+		var isignored bool = false
+		for _, ignore := range diskIgnore {
+			if strings.Index(fi.Name(), ignore) == 0 {
+				isignored = true
+			}
+		}
+		if isignored == false {
+			disks = append(disks, fi.Name())
+		}
+	}
+
+	return disks, nil
 }
 
 type mountpoint struct {
@@ -184,10 +210,10 @@ func listmountedpartition() (map[string]*mountpoint, error) {
 		fsFile := fields[1]
 		fsVfstype := fields[2]
 
-		if _, exist := FSSPEC_IGNORE[fsSpec]; exist {
+		if _, exist := fsSpecIgnore[fsSpec]; exist {
 			continue
 		}
-		if _, exist := FSTYPE_IGNORE[fsVfstype]; exist {
+		if _, exist := fsTypeIgnore[fsVfstype]; exist {
 			continue
 		}
 		if _, ok := points[fsSpec]; !ok {
@@ -245,9 +271,9 @@ func listdiskstate(device string) (*diskstate, error) {
 	return statedisk, nil
 }
 
-func (this *Fsinfo) getfsstate() error {
-	if this.Disks == nil {
-		this.Disks = make(map[string]*DiskStates)
+func (fsinfo *Fsinfo) getfsstate() error {
+	if fsinfo.Disks == nil {
+		fsinfo.Disks = make(map[string]*DiskStates)
 	}
 	points, err := listmountedpartition()
 	if err != nil {
@@ -258,11 +284,11 @@ func (this *Fsinfo) getfsstate() error {
 			continue
 		}
 		device := p.FsSpec[len("/dev/"):]
-		if _, ok := this.Disks[device]; !ok {
-			this.Disks[device] = &DiskStates{}
-			this.Disks[device].Device = device
+		if _, ok := fsinfo.Disks[device]; !ok {
+			fsinfo.Disks[device] = &DiskStates{}
+			fsinfo.Disks[device].Device = device
 		}
-		disk := this.Disks[device]
+		disk := fsinfo.Disks[device]
 		disk.FsSpec = p.FsSpec
 		disk.FsFile = p.FsFile
 		disk.FsVfstype = p.FsVfstype
@@ -284,15 +310,15 @@ func (this *Fsinfo) getfsstate() error {
 		if diskerr != nil {
 			continue
 		}
-		disk.ReadRequests = statedisk.ReadRequests - disk.pre_ReadRequests
-		disk.ReadBytes = statedisk.ReadBytes - disk.pre_ReadBytes
-		disk.WriteRequests = statedisk.WriteRequests - disk.pre_WriteRequests
-		disk.WriteBytes = statedisk.WriteBytes - disk.pre_WriteBytes
+		disk.ReadRequests = statedisk.ReadRequests - disk.preReadRequests
+		disk.ReadBytes = statedisk.ReadBytes - disk.preReadBytes
+		disk.WriteRequests = statedisk.WriteRequests - disk.preWriteRequests
+		disk.WriteBytes = statedisk.WriteBytes - disk.preWriteBytes
 
-		disk.pre_ReadRequests = statedisk.ReadRequests
-		disk.pre_ReadBytes = statedisk.ReadBytes
-		disk.pre_WriteRequests = statedisk.WriteRequests
-		disk.pre_WriteBytes = statedisk.WriteBytes
+		disk.preReadRequests = statedisk.ReadRequests
+		disk.preReadBytes = statedisk.ReadBytes
+		disk.preWriteRequests = statedisk.WriteRequests
+		disk.preWriteBytes = statedisk.WriteBytes
 	}
 	return nil
 }
