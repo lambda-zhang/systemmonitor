@@ -9,24 +9,47 @@ import (
 
 // SysInfo 系统监视器的
 type SysInfo struct {
-	OS      OSinfo
-	CPU     Cpustateinfo
-	Mem     Meminfo
-	Net     NetWorkInfo
-	Fs      Fsinfo
-	Thermal Thermalinfo
+	OSEn bool
+	OS   OSinfo
+
+	CPUEn bool
+	CPU   Cpustateinfo
+
+	MemEn bool
+	Mem   Meminfo
+
+	NetEn bool
+	Net   NetWorkInfo
+
+	FsEn bool
+	Fs   Fsinfo
+
+	ThermalEn bool
+	Thermal   Thermalinfo
 
 	c *cron.Cron
 }
 
 // Getsysteminfo 获得系统资源信息
 func (si *SysInfo) Getsysteminfo() {
-	si.OS.getosinfo()
-	si.CPU.getcpustateinfo()
-	si.Mem.getmeminfo()
-	si.Net.getnetworkstate()
-	si.Fs.getfsstate()
-	si.Thermal.getThermal()
+	if si.OSEn {
+		si.OS.getosinfo()
+	}
+	if si.CPUEn {
+		si.CPU.getcpustateinfo()
+	}
+	if si.MemEn {
+		si.Mem.getmeminfo()
+	}
+	if si.NetEn {
+		si.Net.getnetworkstate()
+	}
+	if si.FsEn {
+		si.Fs.getfsstate()
+	}
+	if si.ThermalEn {
+		si.Thermal.getThermal()
+	}
 }
 
 // New 新新系统监视器

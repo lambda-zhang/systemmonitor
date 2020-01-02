@@ -49,6 +49,13 @@ func callback(sysinfo *s.SysInfo) {
 
 func main() {
 	sm := s.New(periodSec, callback)
+	sm.OSEn = true
+	sm.CPUEn = true
+	sm.MemEn = true
+	sm.NetEn = true
+	sm.FsEn = true
+	sm.ThermalEn = true
+
 	sm.Start()
 	defer sm.Stop()
 	select {}
