@@ -97,7 +97,7 @@ func (oinfo *OSinfo) getkernelinfo() error {
 	}
 	oinfo.KernelVersion = version[0] + "-" + version[2]
 	oinfo.KernelHostname, err = os.Hostname()
-	return nil
+	return err
 }
 
 func (oinfo *OSinfo) getosinfo() error {

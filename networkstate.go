@@ -172,7 +172,7 @@ func (ninfo *NetWorkInfo) getnetif() error {
 				isignored = true
 			}
 		}
-		if isignored == true {
+		if isignored {
 			continue
 		}
 

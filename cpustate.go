@@ -44,19 +44,19 @@ func (cpu *Cpustateinfo) getloadavg() error {
 	var val float64
 	val, err = strconv.ParseFloat(loadavgs[0], 32)
 	if err != nil {
-		err = fmt.Errorf("Avg1min unknown")
+		err = fmt.Errorf("avg1min unknown")
 		return err
 	}
 	cpu.Avg1min = float32(val)
 	val, err = strconv.ParseFloat(loadavgs[1], 32)
 	if err != nil {
-		err = fmt.Errorf("Avg5min unknown")
+		err = fmt.Errorf("avg5min unknown")
 		return err
 	}
 	cpu.Avg5min = float32(val)
 	val, err = strconv.ParseFloat(loadavgs[2], 32)
 	if err != nil {
-		err = fmt.Errorf("Avg15min unknown")
+		err = fmt.Errorf("avg15min unknown")
 		return err
 	}
 	cpu.Avg15min = float32(val)

@@ -3,7 +3,6 @@ package systemmonitor
 import (
 	"bufio"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,42 +10,44 @@ import (
 	"syscall"
 )
 
+/*
 var (
 	diskIgnore = []string{
 		"loop",
 		"sr",
 	}
 )
+*/
 
 var fsSpecIgnore = map[string]struct{}{
-	"/dev/root":   struct{}{},
-	"none":        struct{}{},
-	"nodev":       struct{}{},
-	"proc":        struct{}{},
-	"hugetlbfs":   struct{}{},
-	"sysfs":       struct{}{},
-	"securityfs":  struct{}{},
-	"binfmt_misc": struct{}{},
-	"pstore":      struct{}{},
-	"gvfsd-fuse":  struct{}{},
+	"/dev/root":   {},
+	"none":        {},
+	"nodev":       {},
+	"proc":        {},
+	"hugetlbfs":   {},
+	"sysfs":       {},
+	"securityfs":  {},
+	"binfmt_misc": {},
+	"pstore":      {},
+	"gvfsd-fuse":  {},
 }
 
 var fsTypeIgnore = map[string]struct{}{
-	"cgroup":     struct{}{},
-	"debugfs":    struct{}{},
-	"devpts":     struct{}{},
-	"devtmpfs":   struct{}{},
-	"rpc_pipefs": struct{}{},
-	"rootfs":     struct{}{},
-	"overlay":    struct{}{},
-	"tmpfs":      struct{}{},
-	"pstore":     struct{}{},
-	"autofs":     struct{}{},
-	"mqueue":     struct{}{},
-	"configfs":   struct{}{},
-	"fusectl":    struct{}{},
-	"nfsd":       struct{}{},
-	"squashfs":   struct{}{},
+	"cgroup":     {},
+	"debugfs":    {},
+	"devpts":     {},
+	"devtmpfs":   {},
+	"rpc_pipefs": {},
+	"rootfs":     {},
+	"overlay":    {},
+	"tmpfs":      {},
+	"pstore":     {},
+	"autofs":     {},
+	"mqueue":     {},
+	"configfs":   {},
+	"fusectl":    {},
+	"nfsd":       {},
+	"squashfs":   {},
 }
 
 // DiskStates 磁盘状态
@@ -111,6 +112,7 @@ func getDeviceByLABEL(label string) (string, error) {
 	return device, errorcode
 }
 
+/*
 func listdisks() (disks []string, err error) {
 	disks = make([]string, 0, 10)
 
@@ -126,13 +128,14 @@ func listdisks() (disks []string, err error) {
 				isignored = true
 			}
 		}
-		if isignored == false {
+		if !isignored {
 			disks = append(disks, fi.Name())
 		}
 	}
 
 	return disks, nil
 }
+*/
 
 type mountpoint struct {
 	FsSpec    string // 分区设备节点，如/dev/sda1
@@ -186,7 +189,7 @@ func listrootfspartition() (*mountpoint, error) {
 }
 
 func listmountedpartition() (map[string]*mountpoint, error) {
-	points := make(map[string]*mountpoint, 0)
+	points := make(map[string]*mountpoint)
 	rootpoint, err1 := listrootfspartition()
 	if rootpoint != nil && err1 == nil {
 		points[rootpoint.FsSpec] = rootpoint
@@ -286,7 +289,7 @@ func (fsinfo *Fsinfo) getfsstate() error {
 		return err
 	}
 	for _, p := range points {
-		if strings.Contains(p.FsSpec, "/dev/") == false {
+		if !strings.Contains(p.FsSpec, "/dev/") {
 			continue
 		}
 		device := p.FsSpec[len("/dev/"):]
