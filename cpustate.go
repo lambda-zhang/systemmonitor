@@ -9,15 +9,11 @@ import (
 	"strings"
 )
 
-// Cpustateinfo CPU信息
-type Cpustateinfo struct {
+// CPUstateinfo CPU信息
+type CPUstateinfo struct {
 	CPUIdle       uint64 // time spent in the idle task
 	CPUTotal      uint64 // total of all time fields
 	CPUPermillage int    //usage, 50 meas 5%
-
-	Avg1min  float32
-	Avg5min  float32
-	Avg15min float32
 
 	preCPUIdle  uint64
 	preCPUTotal uint64
@@ -25,7 +21,17 @@ type Cpustateinfo struct {
 	curCPUTotal uint64
 }
 
-func (cpu *Cpustateinfo) getloadavg() error {
+// CPUstateinfos 多核CPU信息
+type CPUstateinfos struct {
+	CPUs   map[string]CPUstateinfo
+	CPUNum int
+
+	Avg1min  float32
+	Avg5min  float32
+	Avg15min float32
+}
+
+func (cpus *CPUstateinfos) getloadavg() error {
 	loadavg, err := readFile2String("/proc/loadavg")
 	if err != nil {
 		return err
@@ -47,19 +53,19 @@ func (cpu *Cpustateinfo) getloadavg() error {
 		err = fmt.Errorf("avg1min unknown")
 		return err
 	}
-	cpu.Avg1min = float32(val)
+	cpus.Avg1min = float32(val)
 	val, err = strconv.ParseFloat(loadavgs[1], 32)
 	if err != nil {
 		err = fmt.Errorf("avg5min unknown")
 		return err
 	}
-	cpu.Avg5min = float32(val)
+	cpus.Avg5min = float32(val)
 	val, err = strconv.ParseFloat(loadavgs[2], 32)
 	if err != nil {
 		err = fmt.Errorf("avg15min unknown")
 		return err
 	}
-	cpu.Avg15min = float32(val)
+	cpus.Avg15min = float32(val)
 
 	return nil
 }
@@ -82,7 +88,12 @@ func _getcpuusage(fields []string) (uint64, uint64, error) {
 	return total, idle, nil
 }
 
-func (cpu *Cpustateinfo) getcpuusage() error {
+func (cpus *CPUstateinfos) getcpuusage() error {
+	if cpus.CPUs == nil {
+		cpus.CPUs = make(map[string]CPUstateinfo)
+		cpus.CPUNum = 0
+	}
+
 	file, err := os.Open("/proc/stat")
 	if err != nil {
 		panic(err)
@@ -95,45 +106,55 @@ func (cpu *Cpustateinfo) getcpuusage() error {
 			break
 		}
 		fields := strings.Fields(string(line))
-		if len(fields) < 1 || fields[0] != "cpu" {
+		if len(fields) < 1 || (!strings.HasPrefix(fields[0], "cpu")) {
 			continue
 		}
-		cpu.curCPUTotal, cpu.curCPUIdle, _ = _getcpuusage(fields)
+		curCPUTotal, curCPUIdle, _ := _getcpuusage(fields)
+		if _, ok := cpus.CPUs[fields[0]]; !ok {
+			cpus.CPUs[fields[0]] = CPUstateinfo{}
+			cpus.CPUNum = 0
+		}
+		curCPU := cpus.CPUs[fields[0]]
+		curCPU.curCPUTotal = curCPUTotal
+		curCPU.curCPUIdle = curCPUIdle
+		cpus.CPUNum = cpus.CPUNum + 1
 	}
 	file.Close()
 
-	if cpu.curCPUTotal > 0 && cpu.preCPUTotal > 0 {
-		cpu.CPUTotal = cpu.curCPUTotal - cpu.preCPUTotal
-		cpu.CPUIdle = cpu.curCPUIdle - cpu.preCPUIdle
-	}
+	for _, v := range cpus.CPUs {
+		if v.curCPUTotal > 0 && v.preCPUTotal > 0 {
+			v.CPUTotal = v.curCPUTotal - v.preCPUTotal
+			v.CPUIdle = v.curCPUIdle - v.preCPUIdle
+		}
 
-	if cpu.CPUTotal < 1 || cpu.CPUIdle < 1 {
-		cpu.CPUPermillage = 0
-	} else if cpu.CPUTotal < cpu.CPUIdle {
-		cpu.CPUPermillage = 1000
-	} else {
-		cpu.CPUPermillage = int((float64(cpu.CPUTotal-cpu.CPUIdle) / float64(cpu.CPUTotal)) * 1000)
-	}
-	if cpu.CPUPermillage > 1000 {
-		cpu.CPUPermillage = 1000
-	} else if cpu.CPUPermillage < 1 {
-		cpu.CPUPermillage = 0
-	}
+		if v.CPUTotal < 1 || v.CPUIdle < 1 {
+			v.CPUPermillage = 0
+		} else if v.CPUTotal < v.CPUIdle {
+			v.CPUPermillage = 1000
+		} else {
+			v.CPUPermillage = int((float64(v.CPUTotal-v.CPUIdle) / float64(v.CPUTotal)) * 1000)
+		}
+		if v.CPUPermillage > 1000 {
+			v.CPUPermillage = 1000
+		} else if v.CPUPermillage < 1 {
+			v.CPUPermillage = 0
+		}
 
-	if cpu.curCPUTotal > 0 {
-		cpu.preCPUIdle = cpu.curCPUIdle
-		cpu.preCPUTotal = cpu.curCPUTotal
+		if v.curCPUTotal > 0 {
+			v.preCPUIdle = v.curCPUIdle
+			v.preCPUTotal = v.curCPUTotal
+		}
 	}
 
 	return nil
 }
 
-func (cpu *Cpustateinfo) getcpustateinfo() error {
-	err := cpu.getloadavg()
+func (cpus *CPUstateinfos) getcpustateinfo() error {
+	err := cpus.getloadavg()
 	if err != nil {
 		return err
 	}
-	err = cpu.getcpuusage()
+	err = cpus.getcpuusage()
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,9 @@ func callback(sysinfo *s.SysInfo) {
 
 	fmt.Println("cpu:")
 	c := sysinfo.CPU
-	fmt.Printf("\tCpu_permillage=%d‰  Avg1min=%f\n", c.CPUPermillage, c.Avg1min)
+	for k, v := range c.CPUs {
+		fmt.Printf("\t%s Cpu_permillage=%d‰  Avg1min=%f\n", k, v.CPUPermillage, c.Avg1min)
+	}
 
 	fmt.Println("memory:")
 	m := sysinfo.Mem

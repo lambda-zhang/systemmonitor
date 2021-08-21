@@ -13,7 +13,7 @@ type SysInfo struct {
 	OS   OSinfo
 
 	CPUEn bool
-	CPU   Cpustateinfo
+	CPU   CPUstateinfos
 
 	MemEn bool
 	Mem   Meminfo
