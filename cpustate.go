@@ -23,7 +23,7 @@ type CPUstateinfo struct {
 
 // CPUstateinfos 多核CPU信息
 type CPUstateinfos struct {
-	CPUs   map[string]CPUstateinfo
+	CPUs   map[string]*CPUstateinfo
 	CPUNum int
 
 	Avg1min  float32
@@ -90,7 +90,7 @@ func _getcpuusage(fields []string) (uint64, uint64, error) {
 
 func (cpus *CPUstateinfos) getcpuusage() error {
 	if cpus.CPUs == nil {
-		cpus.CPUs = make(map[string]CPUstateinfo)
+		cpus.CPUs = make(map[string]*CPUstateinfo)
 		cpus.CPUNum = 0
 	}
 
@@ -111,7 +111,7 @@ func (cpus *CPUstateinfos) getcpuusage() error {
 		}
 		curCPUTotal, curCPUIdle, _ := _getcpuusage(fields)
 		if _, ok := cpus.CPUs[fields[0]]; !ok {
-			cpus.CPUs[fields[0]] = CPUstateinfo{}
+			cpus.CPUs[fields[0]] = &CPUstateinfo{}
 			cpus.CPUNum = 0
 		}
 		curCPU := cpus.CPUs[fields[0]]
@@ -127,7 +127,7 @@ func (cpus *CPUstateinfos) getcpuusage() error {
 			v.CPUIdle = v.curCPUIdle - v.preCPUIdle
 		}
 
-		if v.CPUTotal < 1 || v.CPUIdle < 1 {
+		if v.CPUTotal < 1 {
 			v.CPUPermillage = 0
 		} else if v.CPUTotal < v.CPUIdle {
 			v.CPUPermillage = 1000
