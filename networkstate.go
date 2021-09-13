@@ -3,6 +3,7 @@ package systemmonitor
 import (
 	"bufio"
 	"io"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -38,6 +39,7 @@ const (
 // NetIf 网卡信息
 type NetIf struct {
 	Iface string
+	IPs   map[int]string
 
 	InBytes         uint64
 	InPackages      uint64
@@ -144,6 +146,25 @@ func gettcpcount() (TCPInfo, TCPInfo, error) {
 	return tcpcount, tcpcount6, nil
 }
 
+func getIpFromAddr(addr net.Addr) net.IP {
+	var ip net.IP
+	switch v := addr.(type) {
+	case *net.IPNet:
+		ip = v.IP
+	case *net.IPAddr:
+		ip = v.IP
+	}
+	if ip == nil || ip.IsLoopback() {
+		return nil
+	}
+	ip = ip.To4()
+	if ip == nil {
+		return nil // not an ipv4 address
+	}
+
+	return ip
+}
+
 func (ninfo *NetWorkInfo) getnetif() error {
 	if ninfo.Cards == nil {
 		ninfo.Cards = make(map[string]*NetIf)
@@ -187,6 +208,7 @@ func (ninfo *NetWorkInfo) getnetif() error {
 		if _, ok := ninfo.Cards[name]; !ok {
 			ninfo.Cards[name] = &NetIf{}
 			ninfo.Cards[name].Iface = name
+			ninfo.Cards[name].IPs = make(map[int]string)
 		}
 		netcard := ninfo.Cards[name]
 
@@ -208,6 +230,24 @@ func (ninfo *NetWorkInfo) getnetif() error {
 		netcard.preTotalInPackages = inpackages
 		netcard.preTotalOutBytes = outbytes
 		netcard.preTotalOutPackages = outpackages
+
+		// get IP addr by name
+		iface, err2 := net.InterfaceByName(name)
+		if err2 != nil {
+			continue
+		}
+		addrs, err3 := iface.Addrs()
+		if err3 != nil {
+			continue
+		}
+		for key, addr := range addrs {
+			ip := getIpFromAddr(addr)
+			if ip != nil {
+				if _, ok := ninfo.Cards[name].IPs[key]; !ok {
+					ninfo.Cards[name].IPs[key] = ip.String()
+				}
+			}
+		}
 	}
 	file.Close()
 	return nil

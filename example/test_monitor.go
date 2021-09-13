@@ -17,7 +17,7 @@ func callback(sysinfo *s.SysInfo) {
 	fmt.Println("cpu:")
 	c := sysinfo.CPU
 	for k, v := range c.CPUs {
-		fmt.Printf("\t%s Cpu_permillage=%d‰  Avg1min=%f\n", k, v.CPUPermillage, c.Avg1min)
+		fmt.Printf("\t%s Cpu_permillage=%d‰ [%d/%d] Avg1min=%f\n", k, v.CPUPermillage, v.CPUIdle, v.CPUTotal, c.Avg1min)
 	}
 
 	fmt.Println("memory:")
@@ -27,7 +27,7 @@ func callback(sysinfo *s.SysInfo) {
 	fmt.Println("net:")
 	n := sysinfo.Net
 	for k, v := range n.Cards {
-		fmt.Printf("\t%s: inKBps=%d outKBps=%d\n", k, v.InBytes/uint64(sysinfo.PeriodSec)/1024, v.OutBytes/uint64(sysinfo.PeriodSec)/1024)
+		fmt.Printf("\t%s: \t%s \t%s inKBps=%d outKBps=%d\n", k, v.Iface, v.IPs[0], v.InBytes/uint64(sysinfo.PeriodSec)/1024, v.OutBytes/uint64(sysinfo.PeriodSec)/1024)
 	}
 	fmt.Printf("\ttotal TcpConnections=%d ESTABLISHED=%d TCP_LISTEN=%d\n",
 		n.TCP.TCPConnections+n.TCP6.TCPConnections, n.TCP.TCPEstablished+n.TCP6.TCPEstablished, n.TCP.TCPListen+n.TCP6.TCPListen)
